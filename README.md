@@ -433,7 +433,7 @@ Built for **WCC Launchpad 30 — We Code Coders**.
 
 **Project:** HAND OVER
 
-**Team:** 
+**Team:** LET'S TRY
 
 **Hackathon Dates:** 4–5 October 2026
 
