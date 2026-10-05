@@ -15,8 +15,14 @@ from dotenv import load_dotenv
 
 load_dotenv()  # must run before `import agents` (it reads the .env keys)
 
+import csv
+import io
+import re
+import secrets
+import string
+
 from apscheduler.schedulers.background import BackgroundScheduler  # noqa: E402
-from fastapi import Depends, FastAPI, Header, HTTPException, Query  # noqa: E402
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Query, UploadFile  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from fastapi.responses import RedirectResponse  # noqa: E402
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer  # noqa: E402
@@ -796,6 +802,328 @@ def reset_issue(ident: str, _=Depends(ADMIN_ONLY)):
 def run_monitor_now(_=Depends(ADMIN_ONLY)):
     monitor_tick()
     return {"ok": True}
+
+
+# ================================================================== WARDEN STUDENT MANAGEMENT
+def get_warden_or_admin_jwt(creds: HTTPAuthorizationCredentials | None = Depends(bearer_scheme)):
+    """Validates Supabase Bearer JWT and ensures caller is warden or admin. Disallows ADMIN_KEY shortcut."""
+    if not creds or not creds.credentials:
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization token header")
+    prof = profile_from_token(creds.credentials)
+    if not prof or prof.get("role") not in ("warden", "admin"):
+        raise HTTPException(status_code=403, detail="Forbidden: Only wardens or admins can perform student management operations")
+    return prof
+
+
+def generate_temp_password(length: int = 14) -> str:
+    alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+    while True:
+        pwd = ''.join(secrets.choice(alphabet) for _ in range(length))
+        if (any(c.islower() for c in pwd) and any(c.isupper() for c in pwd)
+                and any(c.isdigit() for c in pwd) and any(c in "!@#$%^&*" for c in pwd)):
+            return pwd
+
+
+class StudentCreateInput(BaseModel):
+    full_name: str
+    email: str
+    roll_number: str
+    phone: str
+    hostel: str
+    block: str
+    floor: str
+    room_number: str
+    course: str
+    year: str
+    guardian_name: str | None = None
+    guardian_phone: str | None = None
+
+
+class StudentUpdateInput(BaseModel):
+    full_name: str | None = None
+    phone: str | None = None
+    block: str | None = None
+    floor: str | None = None
+    room_number: str | None = None
+    course: str | None = None
+    year: str | None = None
+    guardian_name: str | None = None
+    guardian_phone: str | None = None
+    status: str | None = None
+    reset_password: bool = False
+
+
+def validate_and_create_student(data: dict, caller_prof: dict) -> dict:
+    required_fields = ["full_name", "email", "roll_number", "phone", "hostel", "block", "floor", "room_number", "course", "year"]
+    for field in required_fields:
+        val = str(data.get(field) or "").strip()
+        if not val:
+            raise HTTPException(status_code=422, detail=f"Required field '{field}' is missing or empty")
+
+    email = str(data["email"]).strip().lower()
+    full_name = str(data["full_name"]).strip()
+    roll_number = str(data["roll_number"]).strip()
+    phone = str(data["phone"]).strip()
+    hostel = str(data["hostel"]).strip()
+    block = str(data["block"]).strip()
+    floor = str(data["floor"]).strip()
+    room_number = str(data["room_number"]).strip()
+    course = str(data["course"]).strip()
+    year = str(data["year"]).strip()
+    guardian_name = str(data.get("guardian_name") or "").strip() or None
+    guardian_phone = str(data.get("guardian_phone") or "").strip() or None
+
+    # Validate email format
+    if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        raise HTTPException(status_code=422, detail=f"Invalid email format: '{email}'")
+
+    # Validate 10-digit phone
+    clean_phone = re.sub(r"\D", "", phone)
+    if len(clean_phone) < 10:
+        raise HTTPException(status_code=422, detail="Phone number must contain at least 10 digits")
+
+    # Hostel Scope Check: A warden can only create students in their assigned hostel
+    if caller_prof.get("role") == "warden":
+        caller_hostel = caller_prof.get("hostel")
+        if not caller_hostel:
+            res = sb.table("profiles").select("hostel").eq("id", caller_prof["id"]).execute()
+            if res.data and res.data[0].get("hostel"):
+                caller_hostel = res.data[0]["hostel"]
+        if caller_hostel and caller_hostel.lower() != hostel.lower():
+            raise HTTPException(
+                status_code=403,
+                detail=f"Warden can only create students for their assigned hostel ('{caller_hostel}')"
+            )
+
+    # Unique email & roll number check
+    email_check = sb.table("profiles").select("id").eq("email", email).execute()
+    if email_check.data:
+        raise HTTPException(status_code=409, detail=f"Student email '{email}' is already registered")
+
+    roll_check = sb.table("profiles").select("id").eq("roll_number", roll_number).execute()
+    if roll_check.data:
+        raise HTTPException(status_code=409, detail=f"Student roll number '{roll_number}' is already registered")
+
+    # Generate temporary password
+    temp_password = generate_temp_password()
+
+    # Create Supabase Auth User via service key admin API
+    try:
+        auth_res = sb.auth.admin.create_user({
+            "email": email,
+            "password": temp_password,
+            "email_confirm": True,
+            "user_metadata": {"full_name": full_name}
+        })
+        user_obj = auth_res.user if hasattr(auth_res, "user") and auth_res.user else getattr(auth_res, "data", None)
+        user_id = str(user_obj.id if hasattr(user_obj, "id") else user_obj.get("id"))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to create auth user: {str(e)}")
+
+    # Force role = 'student' regardless of input
+    profile_record = {
+        "id": user_id,
+        "email": email,
+        "role": "student",
+        "full_name": full_name,
+        "roll_number": roll_number,
+        "phone": phone,
+        "hostel": hostel,
+        "block": block,
+        "floor": floor,
+        "room_number": room_number,
+        "course": course,
+        "year": year,
+        "guardian_name": guardian_name,
+        "guardian_phone": guardian_phone,
+        "status": "active",
+        "must_change_password": True,
+        "created_by": caller_prof.get("id")
+    }
+    sb.table("profiles").upsert(profile_record).execute()
+
+    # Audit log entry
+    try:
+        sb.table("audit_log").insert({
+            "user_id": user_id,
+            "role": "student",
+            "action": "student_created",
+            "details": {
+                "email": email,
+                "full_name": full_name,
+                "roll_number": roll_number,
+                "hostel": hostel,
+                "created_by": caller_prof.get("id")
+            }
+        }).execute()
+    except Exception:
+        pass
+
+    return {
+        "id": user_id,
+        "email": email,
+        "full_name": full_name,
+        "roll_number": roll_number,
+        "hostel": hostel,
+        "temporary_password": temp_password
+    }
+
+
+@app.post("/warden/students")
+def warden_create_student(body: StudentCreateInput, prof=Depends(get_warden_or_admin_jwt)):
+    result = validate_and_create_student(body.model_dump(), prof)
+    return {"success": True, "student": result}
+
+
+@app.post("/warden/students/bulk")
+async def warden_create_students_bulk(file: UploadFile = File(...), prof=Depends(get_warden_or_admin_jwt)):
+    if not file.filename or not file.filename.endswith(".csv"):
+        raise HTTPException(status_code=422, detail="Only CSV files are supported")
+
+    content = await file.read()
+    try:
+        decoded = content.decode("utf-8-sig")
+    except Exception:
+        decoded = content.decode("latin-1")
+
+    reader = csv.DictReader(io.StringIO(decoded))
+    results = []
+    created_count = 0
+    failed_count = 0
+
+    for idx, row in enumerate(reader, start=1):
+        try:
+            res = validate_and_create_student(row, prof)
+            created_count += 1
+            results.append({
+                "row": idx,
+                "email": row.get("email"),
+                "status": "created",
+                "student": res
+            })
+        except HTTPException as he:
+            failed_count += 1
+            results.append({
+                "row": idx,
+                "email": row.get("email"),
+                "status": "failed",
+                "reason": he.detail
+            })
+        except Exception as e:
+            failed_count += 1
+            results.append({
+                "row": idx,
+                "email": row.get("email"),
+                "status": "failed",
+                "reason": str(e)
+            })
+
+    return {
+        "total": created_count + failed_count,
+        "created": created_count,
+        "failed": failed_count,
+        "results": results
+    }
+
+
+@app.get("/warden/students")
+def warden_list_students(
+    search: str | None = None,
+    block: str | None = None,
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    prof=Depends(get_warden_or_admin_jwt)
+):
+    query = sb.table("profiles").select("*", count="exact").eq("role", "student")
+
+    if prof["role"] == "warden":
+        hostel = prof.get("hostel")
+        if not hostel:
+            res = sb.table("profiles").select("hostel").eq("id", prof["id"]).execute()
+            if res.data and res.data[0].get("hostel"):
+                hostel = res.data[0]["hostel"]
+        if hostel:
+            query = query.eq("hostel", hostel)
+
+    if block:
+        query = query.eq("block", block.strip())
+
+    if search:
+        s = search.strip()
+        query = query.or_(f"full_name.ilike.%{s}%,email.ilike.%{s}%,roll_number.ilike.%{s}%")
+
+    query = query.order("created_at", desc=True).range(offset, offset + limit - 1)
+    res = query.execute()
+
+    return {
+        "students": res.data or [],
+        "total": res.count or len(res.data or [])
+    }
+
+
+@app.patch("/warden/students/{id}")
+def warden_update_student(id: str, body: StudentUpdateInput, prof=Depends(get_warden_or_admin_jwt)):
+    res = sb.table("profiles").select("*").eq("id", id).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    student = res.data[0]
+    if student.get("role") != "student":
+        raise HTTPException(status_code=403, detail="Can only update student profiles")
+
+    if prof["role"] == "warden":
+        caller_hostel = prof.get("hostel")
+        if not caller_hostel:
+            h_res = sb.table("profiles").select("hostel").eq("id", prof["id"]).execute()
+            if h_res.data and h_res.data[0].get("hostel"):
+                caller_hostel = h_res.data[0]["hostel"]
+        if caller_hostel and student.get("hostel") and caller_hostel.lower() != student.get("hostel", "").lower():
+            raise HTTPException(status_code=403, detail="Warden can only update students in their assigned hostel")
+
+    if body.status and body.status not in ("active", "inactive"):
+        raise HTTPException(status_code=422, detail="Status must be 'active' or 'inactive'")
+
+    updates = {}
+    for key in ["full_name", "phone", "block", "floor", "room_number", "course", "year", "guardian_name", "guardian_phone", "status"]:
+        val = getattr(body, key)
+        if val is not None:
+            updates[key] = str(val).strip()
+
+    temp_password = None
+    if body.reset_password:
+        temp_password = generate_temp_password()
+        try:
+            sb.auth.admin.update_user_by_id(id, {"password": temp_password})
+            updates["must_change_password"] = True
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Failed to reset user password: {str(e)}")
+
+    if updates:
+        sb.table("profiles").update(updates).eq("id", id).execute()
+
+    try:
+        sb.table("audit_log").insert({
+            "user_id": id,
+            "role": "student",
+            "action": "student_updated",
+            "details": {
+                "updated_by": prof["id"],
+                "updated_fields": list(updates.keys()),
+                "password_reset": body.reset_password
+            }
+        }).execute()
+    except Exception:
+        pass
+
+    resp = {
+        "success": True,
+        "id": id,
+        "updated_fields": list(updates.keys())
+    }
+    if temp_password:
+        resp["temporary_password"] = temp_password
+
+    return resp
 
 
 @app.get("/", include_in_schema=False)
