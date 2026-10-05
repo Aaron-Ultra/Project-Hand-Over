@@ -2,7 +2,7 @@
 
 > **AI-powered hostel & mess complaint management, tracking, and resolution platform.**
 
-**Live Demo:** [ADD DEPLOYED URL TOMORROW]  
+**Live Demo:** [https://project-hand-over-11111.onrender.com]  
 **Repository:** [https://github.com/Aaron-Ultra/Project-Hand-Over]
 
 ---
@@ -421,7 +421,7 @@ HAND-OVER/
 
 ## 🌐 Live Demo
 
-**[ADD LIVE DEPLOYMENT URL TOMORROW]**
+**[https://project-hand-over-11111.onrender.com]**
 
 **GitHub Repository:** [https://github.com/Aaron-Ultra/Project-Hand-Over]
 
@@ -441,7 +441,6 @@ Built for **WCC Launchpad 30 — We Code Coders**.
 
 ## 🤖 AI / Development Disclosure
 
-[ADD FINAL HACKATHON-REQUIRED AI DISCLOSURE TOMORROW]
 
 AI-assisted development tools were used during development. The team reviewed, tested, and integrated the resulting code and AI behavior into the final project.
 
