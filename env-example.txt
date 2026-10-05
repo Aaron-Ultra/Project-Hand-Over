@@ -1,8 +1,0 @@
-SUPABASE_URL=https://xxxxxxxx.supabase.co
-SUPABASE_SERVICE_KEY=paste-service-role-key
-LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
-LLM_API_KEY=paste-gemini-key
-LLM_MODEL=gemini-3.5-flash
-ADMIN_KEY=warden123
-FRONTEND_ORIGINS=http://localhost:5173
-WARDEN_EMAIL=warden@hostel-demo.local
