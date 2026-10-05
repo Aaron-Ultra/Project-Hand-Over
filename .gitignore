@@ -1,10 +1,21 @@
 # Environments
 .env
-venv/
+.env*.local
+.env.local
 
-# Python caches
+# Dependencies & Build outputs
+node_modules/
+dist/
+build/
+.next/
+out/
 __pycache__/
 *.pyc
+.venv/
+env/
+venv/
+*.log
 
-# OS generated files
+# System
 .DS_Store
+*.pem
