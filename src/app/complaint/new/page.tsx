@@ -31,26 +31,33 @@ export default function NewComplaintPage() {
     setIsSubmitting(true);
     setErrorMessage(null);
 
-    const result = await submitComplaintToBackend(
-      {
-        title,
-        text: description,
-        block: hostelBlock,
-        room: roomNumber,
-        category: category.toLowerCase(),
-        urgency: priority === 'HIGH' || priority === 'EMERGENCY' ? 'urgent' : 'normal',
-      },
-      token
-    );
+    try {
+      const result = await submitComplaintToBackend(
+        {
+          title,
+          text: description,
+          block: hostelBlock,
+          room: roomNumber,
+          category: category.toLowerCase(),
+          urgency: priority === 'HIGH' || priority === 'EMERGENCY' ? 'urgent' : 'normal',
+        },
+        token
+      );
 
-    setIsSubmitting(false);
+      setIsSubmitting(false);
 
-    if (result.success) {
-      const generatedId = result.data?.issue?.public_id || result.data?.complaint?.public_id || result.data?.complaint?.id || `HST-${Math.floor(1000 + Math.random() * 9000)}`;
-      setNewTicketId(generatedId);
-      setIsSubmitted(true);
-    } else {
-      setErrorMessage(result.error || 'Failed to register complaint. Please try again.');
+      if (result.success) {
+        const generatedId = result.data?.issue?.public_id || result.data?.complaint?.public_id || result.data?.complaint?.id || `HST-${Math.floor(1000 + Math.random() * 9000)}`;
+        setNewTicketId(generatedId);
+        setIsSubmitted(true);
+      } else {
+        console.error('Failed to submit complaint:', result.error);
+        setErrorMessage(result.error || 'Failed to register complaint. Please try again.');
+      }
+    } catch (err: any) {
+      console.error('Unexpected exception during complaint submission:', err);
+      setIsSubmitting(false);
+      setErrorMessage(err?.message || 'An unexpected error occurred while processing your request.');
     }
   };
 

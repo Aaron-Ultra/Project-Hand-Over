@@ -2,10 +2,15 @@ import { supabase } from './supabase';
 import { Complaint, Notice, AuditLogItem, Category } from './types';
 import { INITIAL_COMPLAINTS, INITIAL_NOTICES, INITIAL_AUDIT_LOGS } from './store';
 
-const API_URL =
-  (typeof import.meta !== 'undefined' && (import.meta as any).env && ((import.meta as any).env.VITE_API_URL || (import.meta as any).env.NEXT_PUBLIC_API_URL)) ||
-  (typeof process !== 'undefined' && process.env && (process.env.VITE_API_URL || process.env.NEXT_PUBLIC_API_URL)) ||
-  'https://project-hand-over-11111.onrender.com';
+const getApiUrl = (): string => {
+  const envUrl =
+    (typeof process !== 'undefined' && process.env && (process.env.NEXT_PUBLIC_API_URL || process.env.VITE_API_URL)) ||
+    (typeof import.meta !== 'undefined' && (import.meta as any).env && ((import.meta as any).env.NEXT_PUBLIC_API_URL || (import.meta as any).env.VITE_API_URL)) ||
+    'https://project-hand-over-11111.onrender.com';
+  return envUrl.replace(/\/+$/, '');
+};
+
+const API_URL = getApiUrl();
 
 const IS_MOCK =
   (typeof import.meta !== 'undefined' && (import.meta as any).env && ((import.meta as any).env.VITE_USE_MOCK === 'true' || (import.meta as any).env.NEXT_PUBLIC_USE_MOCK === 'true')) ||
@@ -60,7 +65,8 @@ export async function submitComplaintToBackend(
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_URL}/complaints`, {
+    const endpoint = `${API_URL}/complaints`;
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers,
       body: JSON.stringify(input),
@@ -68,12 +74,14 @@ export async function submitComplaintToBackend(
 
     if (!response.ok) {
       const errText = await response.text();
+      console.error(`[submitComplaintToBackend] Error ${response.status} from ${endpoint}:`, errText);
       return { success: false, error: errText || `Server error ${response.status}` };
     }
 
     const data = await response.json();
     return { success: true, data };
   } catch (err: any) {
+    console.error('[submitComplaintToBackend] Network or client exception:', err);
     return { success: false, error: err.message || 'Failed to connect to backend server' };
   }
 }
