@@ -3,7 +3,7 @@
 > **AI-powered hostel & mess complaint management, tracking, and resolution platform.**
 
 **Live Demo:** [ADD DEPLOYED URL TOMORROW]  
-**Repository:** [ADD GITHUB REPOSITORY URL]
+**Repository:** [https://github.com/Aaron-Ultra/Project-Hand-Over]
 
 ---
 
@@ -423,7 +423,7 @@ HAND-OVER/
 
 **[ADD LIVE DEPLOYMENT URL TOMORROW]**
 
-**GitHub Repository:** [ADD GITHUB REPOSITORY URL]
+**GitHub Repository:** [https://github.com/Aaron-Ultra/Project-Hand-Over]
 
 ---
 
