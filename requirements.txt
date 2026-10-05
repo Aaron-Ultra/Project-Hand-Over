@@ -5,5 +5,3 @@ openai
 apscheduler
 python-dotenv
 pydantic
-opentelemetry-distro
-opentelemetry-instrumentation-fastapi
