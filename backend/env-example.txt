@@ -1,0 +1,9 @@
+SUPABASE_URL=<your SUPABASE_URL>
+SUPABASE_SERVICE_KEY=<your SUPABASE_SERVICE_KEY>
+SUPABASE_ANON_KEY=<your SUPABASE_ANON_KEY>
+LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+LLM_API_KEY=<your LLM_API_KEY>
+LLM_MODEL=<your model list>
+ADMIN_KEY=<your ADMIN_KEY>
+FRONTEND_ORIGINS=http://localhost:5173
+WARDEN_EMAIL=warden@hostel-demo.local

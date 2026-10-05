@@ -1,0 +1,21 @@
+# Environments
+.env
+.env*.local
+.env.local
+
+# Dependencies & Build outputs
+node_modules/
+dist/
+build/
+.next/
+out/
+__pycache__/
+*.pyc
+.venv/
+env/
+venv/
+*.log
+
+# System
+.DS_Store
+*.pem

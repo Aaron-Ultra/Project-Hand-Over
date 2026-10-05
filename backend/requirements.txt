@@ -1,0 +1,9 @@
+fastapi>=0.110.0,<1.0.0
+uvicorn[standard]>=0.28.0,<1.0.0
+supabase>=2.4.0,<3.0.0
+openai>=1.14.0,<2.0.0
+apscheduler>=3.10.0,<4.0.0
+python-dotenv>=1.0.0,<2.0.0
+pydantic>=2.6.0,<3.0.0
+opentelemetry-distro>=0.45b0
+opentelemetry-instrumentation-fastapi>=0.45b0
