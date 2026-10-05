@@ -64,6 +64,7 @@ export const Sidebar: React.FC = () => {
   } else if (role === 'warden') {
     navItems = [
       { label: 'Warden Dashboard', href: '/warden', icon: ShieldCheck },
+      { label: 'Students', href: '/warden/students', icon: User },
       { label: 'Duplicate Groups', href: '/groups', icon: Layers },
       { label: 'SLA Tracking', href: '/sla', icon: Clock },
       { label: 'Repeat Complaints', href: '/repeats', icon: Repeat },

@@ -205,3 +205,119 @@ export async function submitFeedbackToBackend(
     return { success: false, error: err.message };
   }
 }
+
+export interface WardenStudentInput {
+  full_name: string;
+  email: string;
+  roll_number: string;
+  phone: string;
+  hostel: string;
+  block: string;
+  floor: string;
+  room_number: string;
+  course: string;
+  year: string;
+  guardian_name?: string;
+  guardian_phone?: string;
+}
+
+export async function fetchWardenStudentsApi(
+  token?: string | null,
+  search?: string,
+  block?: string
+): Promise<{ data: any[]; total: number; error?: string }> {
+  try {
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (block) params.append('block', block);
+
+    const res = await fetch(`${API_URL}/warden/students?${params.toString()}`, { headers });
+    if (!res.ok) {
+      const errText = await res.text();
+      return { data: [], total: 0, error: errText || `Error ${res.status}` };
+    }
+    const json = await res.json();
+    return { data: json.students || [], total: json.total || 0 };
+  } catch (err: any) {
+    return { data: [], total: 0, error: err.message || 'Failed to fetch students' };
+  }
+}
+
+export async function createWardenStudentApi(
+  token: string | null | undefined,
+  input: WardenStudentInput
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_URL}/warden/students`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(input),
+    });
+
+    const json = await res.json();
+    if (!res.ok) {
+      return { success: false, error: json.detail || json.message || `Error ${res.status}` };
+    }
+    return { success: true, data: json.student };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error while creating student' };
+  }
+}
+
+export async function bulkCreateWardenStudentsApi(
+  token: string | null | undefined,
+  file: File
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await fetch(`${API_URL}/warden/students/bulk`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    const json = await res.json();
+    if (!res.ok) {
+      return { success: false, error: json.detail || json.message || `Error ${res.status}` };
+    }
+    return { success: true, data: json };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error during CSV import' };
+  }
+}
+
+export async function updateWardenStudentApi(
+  token: string | null | undefined,
+  studentId: string,
+  updateData: Record<string, any>
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_URL}/warden/students/${studentId}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(updateData),
+    });
+
+    const json = await res.json();
+    if (!res.ok) {
+      return { success: false, error: json.detail || json.message || `Error ${res.status}` };
+    }
+    return { success: true, data: json };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error updating student' };
+  }
+}
