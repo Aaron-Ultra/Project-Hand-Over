@@ -24,9 +24,11 @@ We conducted a preliminary survey with **22 students** to understand their hoste
 
 **Key findings:**
 
-- [ADD SURVEY FINDING 1]
-- [ADD SURVEY FINDING 2]
-- [ADD SURVEY FINDING 3]
+- *63.6%* reported facing mess food quality issues, while *54.5%* reported cleanliness issues.
+- *36.4%* of respondents did not report their last issue; among non-reporters, *40.9%* felt nothing would happen and *36.4%* did not know whom to tell.
+- *59.1%* said they often saw the same problem reported by multiple students without being fixed.
+- *63.6%* considered status tracking, reminders to the responsible office, and confirmation of resolution useful features.
+
 
 > **Note:** The survey had 22 responses and was used as preliminary problem validation rather than as a statistically representative study.
 
@@ -414,26 +416,6 @@ HAND-OVER/
 
 > **Update the structure tomorrow** to match the final GitHub repository.
 
----
-
-## 👥 Team & Contributions
-
-### Team
-
-| Member | Role / Contribution |
-|---|---|
-| **[NAME]** | [CONTRIBUTION] |
-| **[NAME]** | [CONTRIBUTION] |
-| **[NAME]** | [CONTRIBUTION] |
-| **[NAME]** | [CONTRIBUTION] |
-
-### Project Contributions
-
-- **Frontend:** [ADD MEMBER + DETAILS]
-- **Backend & Database:** [ADD MEMBER + DETAILS]
-- **AI Automation & Evaluation:** [ADD MEMBER + DETAILS]
-- **Documentation & README:** [ADD MEMBER + DETAILS]
-- **Deployment:** [ADD MEMBER + DETAILS]
 
 ---
 
@@ -451,7 +433,7 @@ Built for **WCC Launchpad 30 — We Code Coders**.
 
 **Project:** HAND OVER
 
-**Team:** [ADD TEAM NAME]
+**Team:** 
 
 **Hackathon Dates:** 4–5 October 2026
 
@@ -464,20 +446,3 @@ Built for **WCC Launchpad 30 — We Code Coders**.
 AI-assisted development tools were used during development. The team reviewed, tested, and integrated the resulting code and AI behavior into the final project.
 
 ---
-
-## 📌 Final Submission Checklist
-
-- [ ] Final frontend pushed to GitHub
-- [ ] Final backend pushed to GitHub
-- [ ] README updated with final project details
-- [ ] Team names and contributions added
-- [ ] Deployment URL added
-- [ ] GitHub repository URL added
-- [ ] Exact AI provider/model added
-- [ ] Screenshots added
-- [ ] 30-case evaluation file included
-- [ ] Survey findings added
-- [ ] Setup instructions tested
-- [ ] Live deployment tested
-- [ ] Sensitive information/API keys removed
-- [ ] Hackathon AI disclosure completed
