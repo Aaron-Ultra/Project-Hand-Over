@@ -2,15 +2,10 @@ import { supabase } from './supabase';
 import { Complaint, Notice, AuditLogItem, Category } from './types';
 import { INITIAL_COMPLAINTS, INITIAL_NOTICES, INITIAL_AUDIT_LOGS } from './store';
 
-const getApiUrl = (): string => {
-  const envUrl =
-    (typeof process !== 'undefined' && process.env && (process.env.NEXT_PUBLIC_API_URL || process.env.VITE_API_URL)) ||
-    (typeof import.meta !== 'undefined' && (import.meta as any).env && ((import.meta as any).env.NEXT_PUBLIC_API_URL || (import.meta as any).env.VITE_API_URL)) ||
-    'https://project-hand-over-11111.onrender.com';
-  return envUrl.replace(/\/+$/, '');
-};
-
-const API_URL = getApiUrl();
+const API_URL =
+  (typeof import.meta !== 'undefined' && (import.meta as any).env && ((import.meta as any).env.VITE_API_URL || (import.meta as any).env.NEXT_PUBLIC_API_URL)) ||
+  (typeof process !== 'undefined' && process.env && (process.env.VITE_API_URL || process.env.NEXT_PUBLIC_API_URL)) ||
+  '';
 
 const IS_MOCK =
   (typeof import.meta !== 'undefined' && (import.meta as any).env && ((import.meta as any).env.VITE_USE_MOCK === 'true' || (import.meta as any).env.NEXT_PUBLIC_USE_MOCK === 'true')) ||
@@ -65,8 +60,7 @@ export async function submitComplaintToBackend(
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const endpoint = `${API_URL}/complaints`;
-    const response = await fetch(endpoint, {
+    const response = await fetch(`${API_URL}/complaints`, {
       method: 'POST',
       headers,
       body: JSON.stringify(input),
@@ -74,14 +68,12 @@ export async function submitComplaintToBackend(
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error(`[submitComplaintToBackend] Error ${response.status} from ${endpoint}:`, errText);
       return { success: false, error: errText || `Server error ${response.status}` };
     }
 
     const data = await response.json();
     return { success: true, data };
   } catch (err: any) {
-    console.error('[submitComplaintToBackend] Network or client exception:', err);
     return { success: false, error: err.message || 'Failed to connect to backend server' };
   }
 }
@@ -211,5 +203,121 @@ export async function submitFeedbackToBackend(
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };
+  }
+}
+
+export interface WardenStudentInput {
+  full_name: string;
+  email: string;
+  roll_number: string;
+  phone: string;
+  hostel: string;
+  block: string;
+  floor: string;
+  room_number: string;
+  course: string;
+  year: string;
+  guardian_name?: string;
+  guardian_phone?: string;
+}
+
+export async function fetchWardenStudentsApi(
+  token?: string | null,
+  search?: string,
+  block?: string
+): Promise<{ data: any[]; total: number; error?: string }> {
+  try {
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (block) params.append('block', block);
+
+    const res = await fetch(`${API_URL}/warden/students?${params.toString()}`, { headers });
+    if (!res.ok) {
+      const errText = await res.text();
+      return { data: [], total: 0, error: errText || `Error ${res.status}` };
+    }
+    const json = await res.json();
+    return { data: json.students || [], total: json.total || 0 };
+  } catch (err: any) {
+    return { data: [], total: 0, error: err.message || 'Failed to fetch students' };
+  }
+}
+
+export async function createWardenStudentApi(
+  token: string | null | undefined,
+  input: WardenStudentInput
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_URL}/warden/students`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(input),
+    });
+
+    const json = await res.json();
+    if (!res.ok) {
+      return { success: false, error: json.detail || json.message || `Error ${res.status}` };
+    }
+    return { success: true, data: json.student };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error while creating student' };
+  }
+}
+
+export async function bulkCreateWardenStudentsApi(
+  token: string | null | undefined,
+  file: File
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await fetch(`${API_URL}/warden/students/bulk`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    const json = await res.json();
+    if (!res.ok) {
+      return { success: false, error: json.detail || json.message || `Error ${res.status}` };
+    }
+    return { success: true, data: json };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error during CSV import' };
+  }
+}
+
+export async function updateWardenStudentApi(
+  token: string | null | undefined,
+  studentId: string,
+  updateData: Record<string, any>
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_URL}/warden/students/${studentId}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify(updateData),
+    });
+
+    const json = await res.json();
+    if (!res.ok) {
+      return { success: false, error: json.detail || json.message || `Error ${res.status}` };
+    }
+    return { success: true, data: json };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Network error updating student' };
   }
 }
